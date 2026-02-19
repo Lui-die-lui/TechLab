@@ -1,12 +1,17 @@
 import { default as Hls } from "hls.js";
 
+// 해당 m3u8로 Test - CORS 설정이 필요한 경로 
+// 그래서 load 버튼에 따로 걸러서 변환해주는 로직을 집어넣음
+// https://d2zihajmogu5jn.cloudfront.net/bipbop-advanced/bipbop_16x9_variant.m3u8
+
+
 // 해당 요소들로 입력 -> 로드 -> 재생 -> 상태/로그 흐름 만듦
 const videoEl = document.getElementById("video");
 const urlInputEl = document.getElementById("urlInput");
 const loadBtnEl = document.getElementById("loadBtn");
 const stopBtnEl = document.getElementById("stopBtn");
 const statusTextEl = document.getElementById("statusText");
-const qualitySelectEl = document.getElementById("qualitySelect"); 
+const qualitySelectEl = document.getElementById("qualitySelect");
 const logBoxEl = document.getElementById("logBox");
 
 // 전역 상태(현재 hls 인스턴스/cleanup)
@@ -92,10 +97,14 @@ function mountHls(src) {
   log("[LOAD]", src);
 
   // Safari / 네이티브 HLS 분기
+  // Safari 여부 체크 (Chrome/Edge/Opera 제외)
+  const ua = navigator.userAgent;
+  const isSafari = /Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR/.test(ua);
+
   const canNativePlay = videoEl.canPlayType("application/vnd.apple.mpegurl");
 
-  if (canNativePlay) {
-    log("[MODE] Safari native HLS");
+  if (isSafari && canNativePlay) {
+    log(`[MODE] Native HLS(${canNativePlay})`);
 
     // video src 에 m3u8을 바로 넣음
     videoEl.src = src;
@@ -206,17 +215,39 @@ function mountHls(src) {
 // ========================
 // 입력한 m3u8 URL을 mountHls에 전달하고 cleanup을 저장함
 
-loadBtnEl.addEventListener("click", () => {
-  const src = urlInputEl.value.trim();
+// loadBtnEl.addEventListener("click", () => {
+//   const src = urlInputEl.value.trim();
 
-  // URL이 비었으면 안내
+//   // URL이 비었으면 안내
+//   if (!src) {
+//     setStatus("please input url");
+//     log("[WARN] m3u8 URL is empty");
+//     return;
+//   }
+
+//   // mountHls가 반환한 cleanup 함수를 저장
+//   cleanup = mountHls(src);
+// });
+
+// 경로를 
+loadBtnEl.addEventListener("click", () => {
+  let src = urlInputEl.value.trim();
+
   if (!src) {
     setStatus("please input url");
     log("[WARN] m3u8 URL is empty");
     return;
   }
 
-  // mountHls가 반환한 cleanup 함수를 저장
+  const ua = navigator.userAgent;
+  const isSafari = /Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR/.test(ua);
+
+  // Safari가 아니고, 원본 CloudFront URL을 넣었으면 프록시로 자동 변환
+  if (!isSafari && src.startsWith("https://d2zihajmogu5jn.cloudfront.net/")) {
+    src = src.replace("https://d2zihajmogu5jn.cloudfront.net", "/hls-proxy");
+    log("[INFO] non-Safari → auto proxy applied:", src);
+  }
+
   cleanup = mountHls(src);
 });
 
