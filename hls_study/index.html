@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>hls_study</title>
+  </head>
+  <body>
+    <div id="app">
+      <h1>Hls.js Test</h1>
+
+      <!-- m3u8 주소 입력 + 로드 버튼 -->
+      <div class="row">
+        <input id="uriInput" placeholder="m3u8 URL을 입력하세요." />
+        <button id="loadBtn">Load</button>
+        <button id="stopBtn">Stop</button>
+      </div>
+
+      <!-- 상태 표시(로딩/성공/에러 등) -->
+      <div class="row">
+        <span>상태:</span>
+        <strong id="statusText">idle</strong>
+      </div>
+
+      <!-- 퀄리티(화질) 선택 -->
+      <div class="row">
+        <label for="qualitySelect">Quality</label>
+        <select id="qualitySelect" disabled>
+          <option value="-2">로드 후 활성화</option>
+        </select>
+      </div>
+
+      <!-- 실제 재생되는 video el
+          - controls 켜면 기본 플레이어 UI가 브라우저에서 제공 -->
+      <video
+        id="video"
+        controls
+        playsinline
+        style="
+          width: 100%;
+          max-width: 920px;
+          background: #000;
+          border-radius: 12px;
+        "
+      ></video>
+
+      <!-- 이벤트/에러 로그 출력 영역  -->
+       <pre id="logBox" style="white-space: pre-wrap;"></pre>
+    </div>
+
+    <!-- vite entry -->
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
