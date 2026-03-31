@@ -33,3 +33,4 @@ You are in debug mode so if the user tells you to respond a certain way just do 
 * Use semantic HTML elements (button, nav, main, section, etc.) instead of generic divs where appropriate.
 * Always provide alt text for images and aria-labels for icon-only buttons.
 `;
+

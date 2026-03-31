@@ -18,6 +18,7 @@ jobs:
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       pull-requests: read
@@ -28,23 +29,40 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+
+      # uigen_claude_code 하위 프로젝트를 기준으로 환경 준비
+      - name: project Setup
+        working-directory: ./uigen_claude_code
+        run: |
+          npm ci
+          npm run setup || true
+          npm run dev:daemon || true
 
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          prompt: |
+            아래 요구사항을 따라 작업하세요.
 
-          # This is an optional setting that allows Claude to read CI results on PRs
-          additional_permissions: |
-            actions: read
+            [프로젝트 배경]
+            - 실제 작업 대상은 `uigen_claude_code` 하위 프로젝트입니다.
+            - 의존성은 이미 설치되어 있을 수 있지만, 필요 시 현재 상태를 먼저 점검하세요.
+            - 개발 서버가 실행 중이라면 localhost:3000 기준으로 확인하세요.
+            - 로그가 있다면 logs.txt를 우선 확인하세요.
+            - 필요 시 playwright MCP 도구를 사용해 브라우저에서 앱을 점검하세요.
+            - 특별한 이유가 없으면 `uigen_claude_code` 바깥 파일은 수정하지 마세요.
 
-          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
-          # prompt: 'Update the pull request description to include a summary of changes.'
+            [작업 원칙]
+            - 요구사항은 한국어로 해석하고 따라도 됩니다.
+            - 변경 전 현재 구조를 먼저 파악하세요.
+            - 과도한 리팩토링은 하지 말고, 요청 범위 내에서만 수정하세요.
+            - 실행 결과나 검증 방법을 PR/코멘트에 명확히 남기세요.  
 
-          # Optional: Add claude_args to customize behavior and configuration
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
-          # claude_args: '--allowed-tools Bash(gh pr:*)'
-
+          claude_args: >-
+            --system-prompt "프로젝트의 주 작업 대상은 uigen_claude_code 하위 디렉터리입니다. 특별한 이유가 없으면 해당 경로 내부만 수정하세요. 한국어 요구사항을 정확히 해석하고, 변경 전 구조를 먼저 확인한 뒤 최소 범위로 수정하세요."
+            --mcp-config '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--allowed-origins","localhost:3000;cdn.tailwindcss.com;esm.sh"]}}}'
+            --allowedTools "Bash(npm:*),Bash(node:*),Bash(cat:*),Bash(ls:*),Bash(find:*),Bash(grep:*),Bash/sed:*,Bash/awk:*,mcp__playwright__browser_navigate,mcp__playwright__browser_snapshot,mcp__playwright__browser_click,mcp__playwright__browser_type,mcp__playwright__browser_wait_for"
